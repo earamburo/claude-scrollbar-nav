@@ -8,6 +8,7 @@
   transform: translateY(-50%);
   z-index: 999999;
   transition: transform 0.3s ease, opacity 0.3s ease;
+  height: 100vh;
 }
 
 #claude-minimap.hidden {
@@ -19,13 +20,13 @@
 /* Minimap Track (the scrollbar rail) */
 .minimap-track {
   position: relative;
-  width: 80px;
-  height: 70vh;
-  max-height: 600px;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.5));
+  width: 40px;
+  height: 100vh;
+  /* max-height: 600px; */
+  /* background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.5)); */
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  /* border: 1px solid rgba(255, 255, 255, 0.1); */
+  /* backdrop-filter: blur(10px); */
   box-shadow: 
     0 8px 32px rgba(0, 0, 0, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
@@ -38,7 +39,7 @@
   position: absolute;
   left: 0;
   right: 0;
-  background: rgba(139, 92, 246, 0.3);
+  /* background: rgba(139, 92, 246, 0.3); */
   border: 2px solid rgba(139, 92, 246, 0.6);
   border-radius: 8px;
   transition: top 0.1s ease-out, height 0.1s ease-out;
@@ -168,8 +169,8 @@
 
 /* Minimap Hover State */
 .minimap-track:hover {
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6));
-  border-color: rgba(255, 255, 255, 0.15);
+  /* background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)); */
+  /* border-color: rgba(255, 255, 255, 0.15); */
 }
 
 /* Animation for new markers */
@@ -207,7 +208,7 @@ body::-webkit-scrollbar {
 }
 
 body::-webkit-scrollbar-track {
-  background: transparent;
+  background: orange;
 }
 
 body::-webkit-scrollbar-thumb {

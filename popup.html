@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      width: 300px;
+      padding: 18px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      margin: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    h1 {
+      font-size: 20px;
+      margin: 0 0 8px 0;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .icon {
+      font-size: 24px;
+    }
+    
+    p {
+      font-size: 13px;
+      line-height: 1.6;
+      margin: 0 0 18px 0;
+      opacity: 0.95;
+    }
+    
+    .feature {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    
+    .feature-title {
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .feature-desc {
+      font-size: 12px;
+      opacity: 0.9;
+      line-height: 1.5;
+    }
+    
+    .shortcuts {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    
+    .shortcut {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+    
+    .shortcut:last-child {
+      margin-bottom: 0;
+    }
+    
+    .key {
+      background: rgba(0, 0, 0, 0.25);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    
+    .visual-demo {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+    
+    .minimap-preview {
+      width: 40px;
+      height: 120px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 6px;
+      margin: 8px auto;
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .preview-marker {
+      position: absolute;
+      right: -2px;
+      width: 12px;
+      height: 12px;
+      background: white;
+      border-radius: 50%;
+      border: 1px solid rgba(0, 0, 0, 0.3);
+    }
+    
+    .demo-text {
+      font-size: 11px;
+      opacity: 0.8;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1>
+    <span class="icon">🗺️</span>
+    Minimap Navigator
+  </h1>
+  <p>Visual scrollbar with clickable flags for instant navigation through long Claude conversations.</p>
+  
+  <div class="visual-demo">
+    <div class="minimap-preview">
+      <div class="preview-marker" style="top: 10%;"></div>
+      <div class="preview-marker" style="top: 35%;"></div>
+      <div class="preview-marker" style="top: 60%;"></div>
+      <div class="preview-marker" style="top: 85%;"></div>
+    </div>
+    <div class="demo-text">Minimap appears on the right side</div>
+  </div>
+  
+  <div class="feature">
+    <div class="feature-title">🎯 Click to Jump</div>
+    <div class="feature-desc">Click any flag marker to instantly jump to that conversation section</div>
+  </div>
+  
+  <div class="feature">
+    <div class="feature-title">👆 Drag to Scroll</div>
+    <div class="feature-desc">Drag the viewport indicator to smoothly scroll through the conversation</div>
+  </div>
+  
+  <div class="feature">
+    <div class="feature-title">💬 Hover Preview</div>
+    <div class="feature-desc">Hover near markers to see a tooltip with the prompt text</div>
+  </div>
+  
+  <div class="shortcuts">
+    <div class="shortcut">
+      <span>Toggle Minimap</span>
+      <span class="key">Ctrl+Shift+M</span>
+    </div>
+    <div class="shortcut">
+      <span>Next Section</span>
+      <span class="key">Ctrl+Shift+N</span>
+    </div>
+    <div class="shortcut">
+      <span>Previous Section</span>
+      <span class="key">Ctrl+Shift+P</span>
+    </div>
+  </div>
+  
+  <p style="margin-top: 14px; font-size: 11px; opacity: 0.8;">
+    The minimap updates automatically as you continue your conversation.
+  </p>
+</body>
+</html>
