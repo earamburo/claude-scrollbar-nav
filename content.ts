@@ -164,28 +164,18 @@ class ClaudeMinimap {
    */
   private attachEventListeners(): void {
     const track = document.getElementById('minimap-track');
-    const viewport = document.getElementById('minimap-viewport');
-    const toggle = document.getElementById('minimap-toggle');
 
-    if (!track || !viewport || !toggle) {
-      console.error('[Minimap] Required elements not found');
+    if (!track) {
+      console.error('[Minimap] Track element not found');
       return;
     }
 
     // Click to jump
     track.addEventListener('click', (e) => this.handleTrackClick(e));
 
-    // Drag viewport
-    viewport.addEventListener('mousedown', (e) => this.startDrag(e));
-    document.addEventListener('mousemove', (e) => this.handleDrag(e));
-    document.addEventListener('mouseup', () => this.stopDrag());
-
     // Hover for tooltip
     track.addEventListener('mousemove', (e) => this.handleHover(e));
     track.addEventListener('mouseleave', () => this.hideTooltip());
-
-    // Toggle button
-    toggle.addEventListener('click', () => this.toggleMinimap());
 
     console.log('[Minimap] Event listeners attached');
   }
@@ -424,8 +414,52 @@ class ClaudeMinimap {
   }
 
   /**
+ * Apply collision detection to prevent overlapping markers
+ */
+  // private applyCollisionDetection(
+  //   markers: Array<{ section: Section; idx: number; positionPercent: number }>
+  // ): Array<{ section: Section; idx: number; positionPercent: number }> {
+  //   if (markers.length === 0) return markers;
+
+  //   const markerHeightPercent = 3.5; // Approximate marker height as % of track (adjust as needed)
+  //   const adjusted: Array<{ section: Section; idx: number; positionPercent: number }> = [];
+
+  //   // Sort by position
+  //   const sorted = [...markers].sort((a, b) => a.positionPercent - b.positionPercent);
+
+  //   sorted.forEach((marker) => {
+  //     let newPosition = marker.positionPercent;
+
+  //     // Check against all previously placed markers
+  //     for (const prev of adjusted) {
+  //       const distance = newPosition - prev.positionPercent;
+
+  //       // If overlapping or too close, push down
+  //       if (distance < markerHeightPercent) {
+  //         newPosition = prev.positionPercent + markerHeightPercent;
+  //       }
+  //     }
+
+  //     // Don't go past 95%
+  //     if (newPosition > 95) {
+  //       newPosition = 95;
+  //     }
+
+  //     adjusted.push({
+  //       ...marker,
+  //       positionPercent: newPosition
+  //     });
+  //   });
+
+  //   return adjusted;
+  // }
+
+  /**
    * Render markers on the minimap for each section
    */
+  /**
+  * Render markers on the minimap for each section
+  */
   private renderMarkers(): void {
     const markersContainer = document.getElementById('minimap-markers');
     if (!markersContainer) return;
@@ -445,26 +479,110 @@ class ClaudeMinimap {
       return { section, idx, positionPercent };
     });
 
-    // Cluster markers that are within 3% of each other
+    // Cluster every 10 markers
     const clusters = this.clusterMarkers(markerPositions);
 
-    // Render clusters
+    // CHANGED: Check if individual markers will fit, otherwise force clustering
+    const markerHeightPercent = 3.5;
+    const individualMarkers: Array<{ section: Section; idx: number; positionPercent: number }> = [];
+    const forcedClusters: typeof clusters = [];
+
     clusters.forEach(cluster => {
-      // CHANGED: Only cluster if we have exactly 10 markers, otherwise show individually
       if (cluster.markers.length < 10) {
-        // Less than 10 - render all individually
-        cluster.markers.forEach(markerData => {
-          this.renderSingleMarker(markerData, markersContainer);
-        });
+        // Check if these individual markers will fit
+        individualMarkers.push(...cluster.markers);
       } else {
-        // Exactly 10 - render as cluster
-        this.renderCluster(cluster, markersContainer);
+        // Already a cluster of 10
+        forcedClusters.push(cluster);
       }
     });
 
-    console.log(`[Minimap] Rendered ${clusters.length} clusters from ${this.sections.length} sections`);
+    // Check if individual markers can fit without overlapping
+    const canFit = this.checkIfMarkersFit(individualMarkers, markerHeightPercent);
+
+    if (!canFit) {
+      // Can't fit - force all remaining individual markers into clusters
+      console.log('[Minimap] Not enough space - forcing clustering');
+
+      // Re-cluster everything more aggressively (every 5 markers instead of 10)
+      const aggressiveClusters = this.clusterMarkersAggressive(markerPositions, 5);
+
+      aggressiveClusters.forEach(cluster => {
+        if (cluster.markers.length === 1) {
+          this.renderSingleMarker(cluster.markers[0], markersContainer);
+        } else {
+          this.renderCluster(cluster, markersContainer);
+        }
+      });
+    } else {
+      // Can fit - render normally
+      individualMarkers.forEach(markerData => {
+        this.renderSingleMarker(markerData, markersContainer);
+      });
+
+      forcedClusters.forEach(cluster => {
+        this.renderCluster(cluster, markersContainer);
+      });
+    }
+
+    console.log(`[Minimap] Rendered ${this.markers.length} markers/clusters`);
   }
 
+  /**
+   * Check if markers can fit without overlapping
+   */
+  private checkIfMarkersFit(
+    markers: Array<{ section: Section; idx: number; positionPercent: number }>,
+    markerHeightPercent: number
+  ): boolean {
+    if (markers.length === 0) return true;
+
+    const sorted = [...markers].sort((a, b) => a.positionPercent - b.positionPercent);
+    let currentPosition = sorted[0].positionPercent;
+
+    for (let i = 1; i < sorted.length; i++) {
+      currentPosition += markerHeightPercent;
+
+      // If we need to place marker beyond where it naturally belongs
+      if (currentPosition > sorted[i].positionPercent) {
+        // And we're approaching the limit
+        if (currentPosition > 95) {
+          return false; // Won't fit
+        }
+      } else {
+        currentPosition = sorted[i].positionPercent;
+      }
+    }
+
+    return currentPosition <= 95; // Fits if we didn't exceed limit
+  }
+
+  /**
+   * Cluster markers more aggressively when space is limited
+   */
+  private clusterMarkersAggressive(
+    positions: Array<{ section: Section; idx: number; positionPercent: number }>,
+    clusterSize: number
+  ): Array<{ markers: Array<{ section: Section; idx: number; positionPercent: number }>; avgPosition: number }> {
+    const clusters: Array<{
+      markers: Array<{ section: Section; idx: number; positionPercent: number }>;
+      avgPosition: number
+    }> = [];
+
+    const sorted = [...positions].sort((a, b) => a.positionPercent - b.positionPercent);
+
+    for (let i = 0; i < sorted.length; i += clusterSize) {
+      const clusterMarkers = sorted.slice(i, i + clusterSize);
+      const firstMarkerPos = clusterMarkers[0].positionPercent;
+
+      clusters.push({
+        markers: clusterMarkers,
+        avgPosition: firstMarkerPos
+      });
+    }
+
+    return clusters;
+  }
   /**
    * Cluster markers that are close together
    */
@@ -554,7 +672,7 @@ class ClaudeMinimap {
     let safePosition = cluster.avgPosition;
     // If cluster is in top 20%, push it down to ensure X is visible
     if (safePosition < 20) {
-      safePosition = 20;
+      safePosition = 10;
     }
     // If cluster is in bottom 10%, push it up
     if (safePosition > 90) {
@@ -761,43 +879,43 @@ class ClaudeMinimap {
   /**
    * Start dragging the viewport
    */
-  private startDrag(e: MouseEvent): void {
-    e.preventDefault();
-    this.isDragging = true;
-    document.body.style.userSelect = 'none';
-    console.log('[Minimap] Drag started');
-  }
+  // private startDrag(e: MouseEvent): void {
+  //   e.preventDefault();
+  //   this.isDragging = true;
+  //   document.body.style.userSelect = 'none';
+  //   console.log('[Minimap] Drag started');
+  // }
 
   /**
    * Handle dragging the viewport
    */
-  private handleDrag(e: MouseEvent): void {
-    if (!this.isDragging) return;
+  // private handleDrag(e: MouseEvent): void {
+  //   if (!this.isDragging) return;
 
-    const track = document.getElementById('minimap-track');
-    if (!track) return;
+  //   const track = document.getElementById('minimap-track');
+  //   if (!track) return;
 
-    const rect = track.getBoundingClientRect();
-    const mouseY = e.clientY - rect.top;
-    const percent = Math.max(0, Math.min(1, mouseY / rect.height));
+  //   const rect = track.getBoundingClientRect();
+  //   const mouseY = e.clientY - rect.top;
+  //   const percent = Math.max(0, Math.min(1, mouseY / rect.height));
 
-    const container = this.scrollContainer as HTMLElement;
-    const scrollHeight = container.scrollHeight || 1;
-    const targetScroll = scrollHeight * percent;
+  //   const container = this.scrollContainer as HTMLElement;
+  //   const scrollHeight = container.scrollHeight || 1;
+  //   const targetScroll = scrollHeight * percent;
 
-    container.scrollTop = targetScroll;
-  }
+  //   container.scrollTop = targetScroll;
+  // }
 
   /**
    * Stop dragging the viewport
    */
-  private stopDrag(): void {
-    if (this.isDragging) {
-      this.isDragging = false;
-      document.body.style.userSelect = '';
-      console.log('[Minimap] Drag stopped');
-    }
-  }
+  // private stopDrag(): void {
+  //   if (this.isDragging) {
+  //     this.isDragging = false;
+  //     document.body.style.userSelect = '';
+  //     console.log('[Minimap] Drag stopped');
+  //   }
+  // }
 
   /**
    * Handle hover over the minimap to show tooltips

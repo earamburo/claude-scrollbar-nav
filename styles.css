@@ -21,7 +21,7 @@
 .minimap-track {
   position: relative;
   width: 80px;
-  height: calc(100vh - 48px);
+  height: calc(100vh - 15rem);
   border-radius: 12px;
   cursor: pointer;
   overflow: visible;
