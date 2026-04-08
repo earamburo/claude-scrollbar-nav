@@ -68,6 +68,7 @@ class ClaudeMinimap {
       this.startObserving();
       this.setupScrollSync();
       this.setupKeyboardShortcuts();
+      this.setupChatChangeListener(); // ADDED
       this.scanConversation();
 
       console.log('Initialization complete');
@@ -178,6 +179,37 @@ class ClaudeMinimap {
     track.addEventListener('mouseleave', () => this.hideTooltip());
 
     console.log('[Minimap] Event listeners attached');
+  }
+
+  /**
+ * Setup listener for chat changes (URL changes)
+ */
+  private setupChatChangeListener(): void {
+    // Listen for URL changes (Claude uses client-side routing)
+    let lastUrl = location.href;
+
+    const urlChangeObserver = new MutationObserver(() => {
+      const currentUrl = location.href;
+      if (currentUrl !== lastUrl) {
+        lastUrl = currentUrl;
+        console.log('[Minimap] URL changed, re-scanning conversation');
+
+        // Wait a bit for the new chat to load
+        setTimeout(() => {
+          this.sections = []; // Clear old sections
+          this.markers = []; // Clear old markers
+          this.scanConversation();
+        }, 500);
+      }
+    });
+
+    // Observe the entire document for changes that might indicate navigation
+    urlChangeObserver.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+
+    console.log('[Minimap] Chat change listener set up');
   }
 
   /**
@@ -759,26 +791,27 @@ class ClaudeMinimap {
     const clusters = document.querySelectorAll('.minimap-cluster.expanded');
     clusters.forEach(cluster => {
       const clusterDiv = cluster as HTMLElement;
+
+      // Get the count BEFORE collapsing (while expanded-markers still exist)
+      const expandedMarkers = clusterDiv.querySelectorAll('.expanded-marker');
+      const count = expandedMarkers.length;
+
       this.collapseCluster(clusterDiv);
       (clusterDiv as any).isExpanded = false;
 
       // Restore style
       const label = clusterDiv.querySelector('.minimap-cluster-label') as HTMLElement;
       if (label) {
-        const expandedMarkers = clusterDiv.querySelectorAll('.expanded-marker');
-        const count = expandedMarkers.length || label.textContent;
         clusterDiv.style.background = '';
         clusterDiv.style.border = '';
+        label.style.display = 'flex'; // Make sure label is visible
         label.style.fontSize = '14px';
         label.style.color = 'white';
         label.style.position = '';
         label.style.top = '';
         label.style.right = '';
         label.style.zIndex = '';
-        // Get the original count from the cluster
-        const originalCount = cluster.querySelectorAll('.expanded-marker').length;
-        label.textContent = originalCount > 0 ? originalCount.toString() : count.toString();
-        label.style.display = 'flex'; // Make sure it's visible again
+        label.textContent = `${count}`; // Use the count we got earlier
       }
     });
   }
@@ -801,6 +834,7 @@ class ClaudeMinimap {
       expandedMarker.style.position = 'relative';
       expandedMarker.style.top = '0';
       expandedMarker.style.marginBottom = '4px';
+      expandedMarker.style.marginTop = '4px';
 
       const label = document.createElement('div');
       label.className = 'minimap-marker-label';
