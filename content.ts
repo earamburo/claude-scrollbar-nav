@@ -148,6 +148,15 @@ class ClaudeMinimap {
 
     // Setup event listeners
     this.attachEventListeners();
+
+    document.addEventListener('click', (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.minimap-cluster')) {
+        this.closeAllClusters();
+      }
+    })
+
+
   }
 
   /**
@@ -429,35 +438,281 @@ class ClaudeMinimap {
     const container = this.scrollContainer as HTMLElement;
     const scrollHeight = container.scrollHeight || 1;
 
-    this.sections.forEach((section, idx) => {
-      // Calculate position as percentage of total scroll height
+    // Calculate positions for all sections
+    const markerPositions = this.sections.map((section, idx) => {
       const elementTop = this.getElementScrollTop(section.prompt.element);
       const positionPercent = (elementTop / scrollHeight) * 100;
-
-      // Create marker
-      const marker = document.createElement('div');
-      marker.className = 'minimap-marker';
-      marker.style.top = `${positionPercent}%`;
-      marker.setAttribute('data-section-id', idx.toString());
-      marker.setAttribute('data-text', section.prompt.text);
-
-      // Add number label
-      const label = document.createElement('div');
-      label.className = 'minimap-marker-label';
-      label.textContent = (idx + 1).toString();
-      marker.appendChild(label);
-
-      // Click handler
-      marker.addEventListener('click', (e: MouseEvent) => {
-        e.stopPropagation();
-        this.jumpToSection(idx);
-      });
-
-      markersContainer.appendChild(marker);
-      this.markers.push({ element: marker, section, positionPercent });
+      return { section, idx, positionPercent };
     });
 
-    console.log(`[Minimap] ${this.markers.length} markers rendered`);
+    // Cluster markers that are within 3% of each other
+    const clusters = this.clusterMarkers(markerPositions);
+
+    // Render clusters
+    clusters.forEach(cluster => {
+      // CHANGED: Only cluster if we have exactly 10 markers, otherwise show individually
+      if (cluster.markers.length < 10) {
+        // Less than 10 - render all individually
+        cluster.markers.forEach(markerData => {
+          this.renderSingleMarker(markerData, markersContainer);
+        });
+      } else {
+        // Exactly 10 - render as cluster
+        this.renderCluster(cluster, markersContainer);
+      }
+    });
+
+    console.log(`[Minimap] Rendered ${clusters.length} clusters from ${this.sections.length} sections`);
+  }
+
+  /**
+   * Cluster markers that are close together
+   */
+  private clusterMarkers(
+    positions: Array<{ section: Section; idx: number; positionPercent: number }>,
+  ): Array<{ markers: Array<{ section: Section; idx: number; positionPercent: number }>; avgPosition: number }> {
+    const clusters: Array<{
+      markers: Array<{ section: Section; idx: number; positionPercent: number }>;
+      avgPosition: number
+    }> = [];
+
+    // Sort by position
+    const sorted = [...positions].sort((a, b) => a.positionPercent - b.positionPercent);
+
+    // Group every 10 markers into a cluster
+    for (let i = 0; i < sorted.length; i += 10) {
+      const clusterMarkers = sorted.slice(i, i + 10);
+      // CHANGED: Use the position of the first marker instead of average
+      const firstMarkerPos = clusterMarkers[0].positionPercent;
+
+      clusters.push({
+        markers: clusterMarkers,
+        avgPosition: firstMarkerPos
+      });
+    }
+
+    return clusters;
+  }
+
+  /**
+   * Render a single marker
+   */
+  private renderSingleMarker(
+    markerData: { section: Section; idx: number; positionPercent: number },
+    container: HTMLElement
+  ): void {
+    const { section, idx, positionPercent } = markerData;
+
+    const marker = document.createElement('div');
+    marker.className = 'minimap-marker';
+    marker.style.top = `${positionPercent}%`;
+    marker.setAttribute('data-section-id', idx.toString());
+    marker.setAttribute('data-text', section.prompt.text);
+
+    const label = document.createElement('div');
+    label.className = 'minimap-marker-label';
+    const preview = section.prompt.text.length > 25
+      ? section.prompt.text.substring(0, 25) + '...'
+      : section.prompt.text;
+    label.textContent = preview;
+    marker.appendChild(label);
+
+    // Click handler
+    marker.addEventListener('click', (e: MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      this.jumpToSection(idx);
+    });
+
+    // Hover handlers for tooltip
+    marker.addEventListener('mouseenter', (e: MouseEvent) => {
+      this.showTooltip(e.clientX, e.clientY, section.prompt.text);
+    });
+
+    marker.addEventListener('mouseleave', () => {
+      this.hideTooltip();
+    });
+
+    marker.addEventListener('mousemove', (e: MouseEvent) => {
+      this.showTooltip(e.clientX, e.clientY, section.prompt.text);
+    });
+
+    container.appendChild(marker);
+    this.markers.push({ element: marker, section, positionPercent });
+  }
+
+  /**
+   * Render a cluster of markers
+   */
+  private renderCluster(
+    cluster: { markers: Array<{ section: Section; idx: number; positionPercent: number }>; avgPosition: number },
+    container: HTMLElement
+  ): void {
+    const clusterDiv = document.createElement('div');
+    clusterDiv.className = 'minimap-cluster';
+    // Calculate safe position to keep cluster in view
+    let safePosition = cluster.avgPosition;
+    // If cluster is in top 20%, push it down to ensure X is visible
+    if (safePosition < 20) {
+      safePosition = 20;
+    }
+    // If cluster is in bottom 10%, push it up
+    if (safePosition > 90) {
+      safePosition = 90;
+    }
+    clusterDiv.style.top = `${safePosition}%`;
+
+    const count = cluster.markers.length;
+    const label = document.createElement('div');
+    label.className = 'minimap-cluster-label';
+    label.textContent = `${count}`;
+    clusterDiv.appendChild(label);
+
+    (clusterDiv as any).isExpanded = false;
+
+    // Click to expand/collapse
+    clusterDiv.addEventListener('click', (e: MouseEvent) => {
+      e.stopPropagation();
+
+      if (!(clusterDiv as any).isExpanded) {
+        // ADDED: Close any other expanded clusters first
+        this.closeAllClusters();
+
+        // Expand this cluster
+        this.expandCluster(clusterDiv, cluster);
+        (clusterDiv as any).isExpanded = true;
+
+        // CHANGED: Remove background, show X
+        clusterDiv.style.background = 'transparent';
+        clusterDiv.style.border = 'none';
+        label.style.display = '';
+        label.textContent = '×';
+        label.style.fontSize = '24px';
+        label.style.color = 'rgba(204, 93, 44, 0.9)';
+        label.style.position = 'absolute';
+        label.style.top = '4px';
+        label.style.right = '4px';
+        label.style.zIndex = '1000';
+
+      } else {
+        this.collapseCluster(clusterDiv);
+        (clusterDiv as any).isExpanded = false;
+
+        // Restore original style
+        clusterDiv.style.background = '';
+        clusterDiv.style.border = '';
+        label.style.fontSize = '14px';
+        label.style.color = 'white';
+        label.style.position = '';
+        label.style.top = '';
+        label.style.right = '';
+        label.style.zIndex = '';
+        label.textContent = `${count}`;
+      }
+    });
+
+    // Hover to show summary (only when collapsed)
+    clusterDiv.addEventListener('mouseenter', (e: MouseEvent) => {
+      if (!(clusterDiv as any).isExpanded) {
+        const summaryText = cluster.markers
+          .map((m, i) => `${i + 1}. ${m.section.prompt.text}`)
+          .join('\n\n');
+        this.showTooltip(e.clientX, e.clientY, summaryText);
+      }
+    });
+
+    clusterDiv.addEventListener('mouseleave', () => {
+      this.hideTooltip();
+    });
+
+    container.appendChild(clusterDiv);
+
+    this.markers.push({
+      element: clusterDiv,
+      section: cluster.markers[0].section,
+      positionPercent: cluster.avgPosition
+    });
+  }
+
+  /**
+   * Close all expanded clusters
+   */
+  private closeAllClusters(): void {
+    const clusters = document.querySelectorAll('.minimap-cluster.expanded');
+    clusters.forEach(cluster => {
+      const clusterDiv = cluster as HTMLElement;
+      this.collapseCluster(clusterDiv);
+      (clusterDiv as any).isExpanded = false;
+
+      // Restore style
+      const label = clusterDiv.querySelector('.minimap-cluster-label') as HTMLElement;
+      if (label) {
+        const expandedMarkers = clusterDiv.querySelectorAll('.expanded-marker');
+        const count = expandedMarkers.length || label.textContent;
+        clusterDiv.style.background = '';
+        clusterDiv.style.border = '';
+        label.style.fontSize = '14px';
+        label.style.color = 'white';
+        label.style.position = '';
+        label.style.top = '';
+        label.style.right = '';
+        label.style.zIndex = '';
+        // Get the original count from the cluster
+        const originalCount = cluster.querySelectorAll('.expanded-marker').length;
+        label.textContent = originalCount > 0 ? originalCount.toString() : count.toString();
+        label.style.display = 'flex'; // Make sure it's visible again
+      }
+    });
+  }
+
+  /**
+   * Expand a cluster to show individual markers
+   */
+  private expandCluster(
+    clusterDiv: HTMLElement,
+    cluster: { markers: Array<{ section: Section; idx: number; positionPercent: number }>; avgPosition: number }
+  ): void {
+    clusterDiv.classList.add('expanded');
+
+    // CHANGED: Stack from top (no spacing offset)
+    cluster.markers.forEach((markerData) => {
+      const { section, idx } = markerData;
+
+      const expandedMarker = document.createElement('div');
+      expandedMarker.className = 'minimap-marker expanded-marker';
+      expandedMarker.style.position = 'relative';
+      expandedMarker.style.top = '0';
+      expandedMarker.style.marginBottom = '4px';
+
+      const label = document.createElement('div');
+      label.className = 'minimap-marker-label';
+      const preview = section.prompt.text.length > 25
+        ? section.prompt.text.substring(0, 25) + '...'
+        : section.prompt.text;
+      label.textContent = preview;
+      expandedMarker.appendChild(label);
+
+      // Click to jump
+      expandedMarker.addEventListener('click', (e: MouseEvent) => {
+        e.stopPropagation();
+        this.jumpToSection(idx);
+        // CHANGED: Close all clusters instead of just this one
+        this.closeAllClusters();
+      });
+
+      clusterDiv.appendChild(expandedMarker);
+    });
+  }
+
+  /**
+   * Collapse an expanded cluster
+   */
+  private collapseCluster(clusterDiv: HTMLElement): void {
+    clusterDiv.classList.remove('expanded');
+
+    // Remove expanded markers
+    const expandedMarkers = clusterDiv.querySelectorAll('.expanded-marker');
+    expandedMarkers.forEach(marker => marker.remove());
   }
 
   /**
@@ -470,6 +725,7 @@ class ClaudeMinimap {
 
     return elementRect.top - containerRect.top + (container.scrollTop || 0);
   }
+
 
   /**
    * Handle click on the minimap track
@@ -606,14 +862,39 @@ class ClaudeMinimap {
 
     const section = this.sections[sectionId];
     if (!section) return; // Additional safety check
+    console.log('[Minimap] Jumping to section, element:', section.prompt.element);
+    console.log('[Minimap] Element classes:', section.prompt.element.className);
+    console.log('[Minimap] Element inline styles:', section.prompt.element.style.cssText);
 
     section.prompt.element.scrollIntoView({
       behavior: 'smooth',
       block: 'center'
     });
 
+    // Remove focus and any background that appears
+    section.prompt.element.blur();
+
+    // Force remove backgrounds on the element and its children
+    const removeBackgrounds = () => {
+      section.prompt.element.style.backgroundColor = 'transparent';
+      section.prompt.element.style.background = 'transparent';
+
+      // Also check parent elements
+      let parent = section.prompt.element.parentElement;
+      while (parent && parent !== document.body) {
+        parent.style.backgroundColor = 'transparent';
+        parent.style.background = 'transparent';
+        parent = parent.parentElement;
+      }
+    };
+
+    // Run immediately and after a delay (in case Claude's JS adds it later)
+    removeBackgrounds();
+    setTimeout(removeBackgrounds, 100);
+    setTimeout(removeBackgrounds, 500);
+
     // Flash highlight
-    this.highlightElement(section.prompt.element);
+    // this.highlightElement(section.prompt.element);
 
     console.log(`[Minimap] Jumped to section ${sectionId + 1}`);
   }
@@ -665,13 +946,13 @@ class ClaudeMinimap {
   /**
    * Highlight an element with a flash effect
    */
-  private highlightElement(element: HTMLElement): void {
-    element.style.transition = 'background-color 0.3s';
-    element.style.backgroundColor = 'rgba(139, 92, 246, 0.15)';
-    setTimeout(() => {
-      element.style.backgroundColor = '';
-    }, 800);
-  }
+  // private highlightElement(element: HTMLElement): void {
+  //   element.style.transition = 'background-color 0.3s';
+  //   // element.style.backgroundColor = 'rgba(139, 92, 246, 0.15)';
+  //   setTimeout(() => {
+  //     element.style.backgroundColor = '';
+  //   }, 800);
+  // }
 
   // ============================================================================
   // PUBLIC API FOR TESTING

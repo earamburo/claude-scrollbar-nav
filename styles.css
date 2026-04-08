@@ -8,7 +8,7 @@
   transform: translateY(-50%);
   z-index: 999999;
   transition: transform 0.3s ease, opacity 0.3s ease;
-  height: 100vh;
+  height: calc(100vh - 7rem);
 }
 
 #claude-minimap.hidden {
@@ -20,19 +20,20 @@
 /* Minimap Track (the scrollbar rail) */
 .minimap-track {
   position: relative;
-  width: 40px;
-  height: 100vh;
-  /* max-height: 600px; */
-  /* background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.5)); */
+  width: 80px;
+  height: calc(100vh - 48px);
   border-radius: 12px;
-  /* border: 1px solid rgba(255, 255, 255, 0.1); */
-  /* backdrop-filter: blur(10px); */
-  box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   cursor: pointer;
-  overflow: hidden;
+  overflow: visible;
+  /* Remove all background and border properties to make it transparent */
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
 }
+
+/* Minimap Hover State */
+.minimap-track:hover {}
 
 /* Current Viewport Indicator */
 .minimap-viewport {
@@ -49,7 +50,7 @@
 
 .minimap-viewport:active {
   cursor: grabbing;
-  background: rgba(139, 92, 246, 0.4);
+  /* background: rgba(139, 92, 246, 0.4); */
 }
 
 /* Markers Container */
@@ -62,46 +63,58 @@
   z-index: 1;
 }
 
-/* Individual Marker (Flag) */
+/* Individual Marker - Card Style (Claude Orange Theme) */
 .minimap-marker {
   position: absolute;
-  right: -2px;
-  width: 24px;
-  height: 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.9);
+  right: 8px;
+  width: auto;
+  min-width: 140px;
+  max-width: 200px;
+  height: 32px;
+  background: rgba(204, 93, 44, 0.9);
+  /* Claude orange */
+  border-radius: 6px;
+  border: none;
+  border-left: 3px solid rgba(255, 140, 66, 0.95);
+  /* Lighter orange accent */
   cursor: pointer;
   transform: translateY(-50%);
   transition: all 0.2s ease;
-  box-shadow: 
-    0 2px 8px rgba(0, 0, 0, 0.3),
-    0 0 0 0 rgba(102, 126, 234, 0);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
   display: flex;
   align-items: center;
-  justify-content: center;
+  padding: 0 12px;
 }
 
 .minimap-marker:hover {
-  transform: translateY(-50%) scale(1.3) translateX(-4px);
-  box-shadow: 
-    0 4px 16px rgba(0, 0, 0, 0.4),
-    0 0 0 4px rgba(102, 126, 234, 0.3);
+  transform: translateY(-50%) translateX(-6px);
+  box-shadow: 0 5px 20px rgba(204, 93, 44, 0.5);
+  background: rgba(230, 110, 50, 0.95);
+  /* Brighter orange on hover */
+  max-width: 240px;
+  border-left-width: 4px;
   z-index: 10;
 }
 
 .minimap-marker:active {
-  transform: translateY(-50%) scale(1.2) translateX(-4px);
+  transform: translateY(-50%) scale(0.98) translateX(-6px);
 }
 
-/* Marker Label (Number) */
+/* Marker Label (Text Preview) */
 .minimap-marker-label {
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
   color: white;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
   user-select: none;
   pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.minimap-marker:active {
+  transform: translateY(-50%) scale(1.2) translateX(-4px);
 }
 
 /* Tooltip */
@@ -167,11 +180,78 @@
   transform: translateX(-50%) scale(0.95);
 }
 
-/* Minimap Hover State */
-.minimap-track:hover {
-  /* background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)); */
-  /* border-color: rgba(255, 255, 255, 0.15); */
+/* Cluster styling */
+.minimap-cluster {
+  position: absolute;
+  right: 8px;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, rgba(204, 93, 44, 0.95), rgba(230, 110, 50, 0.95));
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: all 0.2s ease;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
 }
+
+.minimap-cluster:hover {
+  transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 5px 20px rgba(204, 93, 44, 0.5);
+}
+
+.minimap-cluster-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Expanded cluster - UPDATED */
+.minimap-cluster.expanded {
+  width: auto;
+  min-width: 150px;
+  max-width: 220px;
+  height: auto;
+  border-radius: 12px;
+  padding: 32px 8px 8px 8px; /* Extra top padding for X button */
+  flex-direction: column;
+  gap: 0;
+  align-items: stretch;
+  z-index: 100;
+  /* CHANGED: Center vertically, no background */
+  transform: translateY(-50%);
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.minimap-cluster.expanded .minimap-cluster-label {
+  display: flex !important;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+/* Expanded individual markers inside cluster */
+.expanded-marker {
+  position: relative !important;
+  transform: none !important;
+  margin: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 28px !important;
+  top: 0 !important;
+}
+
+
+
+
 
 /* Animation for new markers */
 @keyframes markerAppear {
@@ -179,6 +259,7 @@
     opacity: 0;
     transform: translateY(-50%) scale(0);
   }
+
   to {
     opacity: 1;
     transform: translateY(-50%) scale(1);
@@ -212,12 +293,12 @@ body::-webkit-scrollbar-track {
 }
 
 body::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  /* background: rgba(255, 255, 255, 0.1); */
   border-radius: 6px;
 }
 
 body::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.15);
+  /* background: rgba(255, 255, 255, 0.15); */
 }
 
 /* Ensure minimap stays on top of everything */
@@ -226,29 +307,40 @@ body::-webkit-scrollbar-thumb:hover {
 }
 
 /* Marker alternate colors for variety (every 5th marker) */
+/* Marker alternate colors - Orange theme variations */
 .minimap-marker:nth-child(5n+1) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: rgba(204, 93, 44, 0.9);
+  /* Original Claude orange */
+  border-left-color: rgba(255, 140, 66, 0.95);
 }
 
 .minimap-marker:nth-child(5n+2) {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  background: rgba(230, 110, 50, 0.9);
+  /* Brighter orange */
+  border-left-color: rgba(255, 150, 80, 0.95);
 }
 
 .minimap-marker:nth-child(5n+3) {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  background: rgba(255, 130, 70, 0.9);
+  /* Light orange */
+  border-left-color: rgba(255, 170, 100, 0.95);
 }
 
 .minimap-marker:nth-child(5n+4) {
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  background: rgba(190, 80, 35, 0.9);
+  /* Darker orange */
+  border-left-color: rgba(220, 110, 55, 0.95);
 }
 
 .minimap-marker:nth-child(5n+5) {
-  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+  background: rgba(245, 140, 80, 0.9);
+  /* Warm orange */
+  border-left-color: rgba(255, 160, 90, 0.95);
 }
 
 /* Highlight effect on track when dragging */
 .minimap-track:active {
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.7));
+  /* background: linear-gradient(to bottom, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.7)); */
 }
 
 /* Smooth transitions */
