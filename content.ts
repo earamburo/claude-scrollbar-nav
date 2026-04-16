@@ -1,8 +1,57 @@
 /**
  * Claude Minimap Navigator - TypeScript Version
  * Visual scrollbar with clickable markers for conversation navigation
- */
+ 
 
+ON PAGE LOAD:
+  ↓
+  init()
+  ↓
+  loadSavedState() → Get visibility preference from Chrome storage
+  ↓
+  Wait 1 second (let page load)
+  ↓
+  findScrollContainer() → Find the scrollable div on the page
+  ↓
+  createMinimap() → Inject HTML into page
+  ↓
+  attachEventListeners() → Setup click handlers
+  ↓
+  startObserving() → Watch for new messages appearing
+  ↓
+  setupScrollSync() → Keep viewport indicator in sync
+  ↓
+  setupKeyboardShortcuts() → Ctrl+Shift+[ and ]
+  ↓
+  setupChatChangeListener() → Detect when user switches chats
+  ↓
+  scanConversation() → Find all messages and create markers
+  */
+
+/**
+ * USER MESSAGES
+   ↓
+SCAN & FIND THEM
+   ↓
+CALCULATE POSITIONS (% from top)
+   ↓
+GROUP EVERY 10 → CLUSTERS
+   ↓
+CHECK IF INDIVIDUAL MARKERS FIT
+   ↓
+ YES              NO
+   ↓               ↓
+RENDER SINGLE    RE-CLUSTER
+MARKERS          MORE (every 5)
+   ↓               ↓
+   └───────┬───────┘
+           ↓
+    DISPLAY ON PAGE
+           ↓
+  USER CLICKS MARKER
+           ↓
+    SCROLL TO MESSAGE
+ */
 // ============================================================================
 // TYPE DEFINITIONS
 // ============================================================================
@@ -33,19 +82,17 @@ interface StorageData {
 // ============================================================================
 
 class ClaudeMinimap {
-  // DOM Elements
   private minimap: HTMLDivElement | null = null;
   private scrollContainer: HTMLElement | Document = document.documentElement;
 
-  // State
   private markers: MarkerData[] = [];
   private sections: Section[] = [];
   private isDragging: boolean = false;
   private isVisible: boolean = true;
 
-  // Observers & Timeouts
-  private observer: MutationObserver | null = null;
-  private scanTimeout: number | null = null;
+  // // Observers & Timeouts
+  // private observer: MutationObserver | null = null;
+  // private scanTimeout: number | null = null;
 
   constructor() {
     this.init();
@@ -65,11 +112,11 @@ class ClaudeMinimap {
     setTimeout(() => {
       this.findScrollContainer();
       this.createMinimap();
-      this.startObserving();
-      this.setupScrollSync();
-      this.setupKeyboardShortcuts();
-      this.setupChatChangeListener(); // ADDED
-      this.scanConversation();
+      // this.startObserving();
+      // this.setupScrollSync();
+      // this.setupKeyboardShortcuts();
+      // this.setupChatChangeListener(); // ADDED
+      // this.scanConversation();
 
       console.log('Initialization complete');
     }, 1000);
@@ -96,12 +143,7 @@ class ClaudeMinimap {
    * Claude.ai's structure can vary, so we search for it
    */
   private findScrollContainer(): void {
-    console.log('Finding scroll container...');
-
-    // Default to document
     this.scrollContainer = document.documentElement;
-
-    // Try to find a more specific scroll container
     const containers = document.querySelectorAll('[class*="scroll"], [style*="overflow"]');
 
     for (const container of Array.from(containers)) {
@@ -121,44 +163,56 @@ class ClaudeMinimap {
   /**
    * Create the minimap DOM structure and inject it into the page
    */
-  private createMinimap(): void {
-    console.log('[Minimap] Creating minimap UI...');
-
-    // Remove existing if present
-    const existing = document.getElementById('claude-minimap');
-    if (existing) {
-      existing.remove();
-    }
-
-    // Create main container
-    this.minimap = document.createElement('div');
-    this.minimap.id = 'claude-minimap';
-    this.minimap.className = this.isVisible ? '' : 'hidden';
-
-    // Build HTML structure
-    this.minimap.innerHTML = `
-      <div class="minimap-track" id="minimap-track">
-        <div class="minimap-markers" id="minimap-markers"></div>
-      </div>
-      <div class="minimap-tooltip" id="minimap-tooltip"></div>
-    `;
-
-
-    document.body.appendChild(this.minimap);
-    console.log('[Minimap] Minimap UI created');
-
-    // Setup event listeners
-    this.attachEventListeners();
-
-    document.addEventListener('click', (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest('.minimap-cluster')) {
-        this.closeAllClusters();
-      }
-    })
-
-
+private createMinimap(): void {
+  // Reset minimap on reload/load
+  const existing = document.getElementById('claude-minimap');
+  if (existing) {
+    existing.remove();
   }
+
+  // Get scroll container dimensions and padding
+  const container = this.scrollContainer as HTMLElement;
+  const containerStyle = window.getComputedStyle(container);
+  console.log({containerStyle});
+  const containerHeight = containerStyle.height;
+  
+  // Extract padding from container
+  const containerPaddingTop = containerStyle.paddingTop;
+  const containerPaddingBottom = containerStyle.paddingBottom;
+
+  // Create main container
+  this.minimap = document.createElement('div');
+  this.minimap.id = 'claude-minimap';
+  this.minimap.className = this.isVisible ? '' : 'hidden';
+  // this.minimap.style.background = 'green';
+  
+  // Set inline styles based on scroll container
+  this.minimap.style.height = `${containerHeight}px`;
+  this.minimap.style.overflow = 'visible';
+  this.minimap.style.overflowX = 'hidden';
+
+  // Build HTML structure with container's padding
+  this.minimap.innerHTML = `
+    <div class="minimap-track" id="minimap-track" style="height: 100%; padding: ${containerPaddingTop} 0 ${containerPaddingBottom} 0; overflow: visible; overflow-x: hidden;">
+      <div class="minimap-markers" id="minimap-markers"></div>
+    </div>
+  `;
+  //   <div class="minimap-tooltip" id="minimap-tooltip"></div>
+
+  document.body.appendChild(this.minimap);
+  console.log('[Minimap] Minimap UI created with height:', containerHeight, 'px');
+  console.log('[Minimap] Using container padding - top:', containerPaddingTop, 'bottom:', containerPaddingBottom);
+
+  // Setup event listeners
+  this.attachEventListeners();
+
+  document.addEventListener('click', (e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (!target.closest('.minimap-cluster')) {
+      this.closeAllClusters();
+    }
+  });
+}
 
   /**
    * Attach all event listeners to minimap elements
@@ -184,149 +238,149 @@ class ClaudeMinimap {
   /**
  * Setup listener for chat changes (URL changes)
  */
-  private setupChatChangeListener(): void {
-    // Listen for URL changes (Claude uses client-side routing)
-    let lastUrl = location.href;
+  // private setupChatChangeListener(): void {
+  //   // Listen for URL changes (Claude uses client-side routing)
+  //   let lastUrl = location.href;
 
-    const urlChangeObserver = new MutationObserver(() => {
-      const currentUrl = location.href;
-      if (currentUrl !== lastUrl) {
-        lastUrl = currentUrl;
-        console.log('[Minimap] URL changed, re-scanning conversation');
+  //   const urlChangeObserver = new MutationObserver(() => {
+  //     const currentUrl = location.href;
+  //     if (currentUrl !== lastUrl) {
+  //       lastUrl = currentUrl;
+  //       console.log('[Minimap] URL changed, re-scanning conversation');
 
-        // Wait a bit for the new chat to load
-        setTimeout(() => {
-          this.sections = []; // Clear old sections
-          this.markers = []; // Clear old markers
-          this.scanConversation();
-        }, 500);
-      }
-    });
+  //       // Wait a bit for the new chat to load
+  //       setTimeout(() => {
+  //         this.sections = []; // Clear old sections
+  //         this.markers = []; // Clear old markers
+  //         this.scanConversation();
+  //       }, 500);
+  //     }
+  //   });
 
-    // Observe the entire document for changes that might indicate navigation
-    urlChangeObserver.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
+  //   // Observe the entire document for changes that might indicate navigation
+  //   urlChangeObserver.observe(document.body, {
+  //     childList: true,
+  //     subtree: true
+  //   });
 
-    console.log('[Minimap] Chat change listener set up');
-  }
+  //   console.log('[Minimap] Chat change listener set up');
+  // }
 
   /**
    * Set up scroll synchronization between page and minimap
    */
-  private setupScrollSync(): void {
-    const updateViewport = (): void => {
-      if (this.isDragging) return; // Don't update during drag
+  // private setupScrollSync(): void {
+  //   const updateViewport = (): void => {
+  //     if (this.isDragging) return; // Don't update during drag
 
-      const container = this.scrollContainer as HTMLElement;
-      const scrollTop = container.scrollTop || 0;
-      const scrollHeight = container.scrollHeight || 1;
-      const clientHeight = container.clientHeight || 1;
+  //     const container = this.scrollContainer as HTMLElement;
+  //     const scrollTop = container.scrollTop || 0;
+  //     const scrollHeight = container.scrollHeight || 1;
+  //     const clientHeight = container.clientHeight || 1;
 
-      // Calculate viewport position and height as percentages
-      const viewportPercent = (scrollTop / scrollHeight) * 100;
-      const viewportHeight = (clientHeight / scrollHeight) * 100;
+  //     // Calculate viewport position and height as percentages
+  //     const viewportPercent = (scrollTop / scrollHeight) * 100;
+  //     const viewportHeight = (clientHeight / scrollHeight) * 100;
 
-      const viewport = document.getElementById('minimap-viewport');
-      if (viewport) {
-        viewport.style.top = `${viewportPercent}%`;
-        viewport.style.height = `${Math.max(viewportHeight, 2)}%`; // Min 2%
-      }
-    };
+  //     const viewport = document.getElementById('minimap-viewport');
+  //     if (viewport) {
+  //       viewport.style.top = `${viewportPercent}%`;
+  //       viewport.style.height = `${Math.max(viewportHeight, 2)}%`; // Min 2%
+  //     }
+  //   };
 
-    // Listen to scroll events
-    const scrollElement = this.scrollContainer as HTMLElement;
-    scrollElement.addEventListener('scroll', updateViewport, { passive: true });
-    window.addEventListener('resize', updateViewport);
+  //   // Listen to scroll events
+  //   const scrollElement = this.scrollContainer as HTMLElement;
+  //   scrollElement.addEventListener('scroll', updateViewport, { passive: true });
+  //   window.addEventListener('resize', updateViewport);
 
-    // Initial update
-    setTimeout(updateViewport, 100);
+  //   // Initial update
+  //   setTimeout(updateViewport, 100);
 
-    console.log('[Minimap] Scroll sync set up');
-  }
+  //   console.log('[Minimap] Scroll sync set up');
+  // }
 
   /**
    * Set up keyboard shortcuts
    */
-  private setupKeyboardShortcuts(): void {
-    document.addEventListener('keydown', (e: KeyboardEvent) => {
-      // Ctrl+Shift+M - Toggle minimap
-      if (e.ctrlKey && e.shiftKey && e.key === 'P') {
-        e.preventDefault();
-        this.toggleMinimap();
-      }
+  // private setupKeyboardShortcuts(): void {
+  //   document.addEventListener('keydown', (e: KeyboardEvent) => {
+  //     // Ctrl+Shift+M - Toggle minimap
+  //     if (e.ctrlKey && e.shiftKey && e.key === 'P') {
+  //       e.preventDefault();
+  //       this.toggleMinimap();
+  //     }
 
-      // Ctrl+Shift+N - Next section
-      if (e.ctrlKey && e.shiftKey && e.key === '}') {
-        e.preventDefault();
-        this.jumpToNextSection();
-      }
+  //     // Ctrl+Shift+N - Next section
+  //     if (e.ctrlKey && e.shiftKey && e.key === '}') {
+  //       e.preventDefault();
+  //       this.jumpToNextSection();
+  //     }
 
-      // Ctrl+Shift+P - Previous section
-      if (e.ctrlKey && e.shiftKey && e.key === '{') {
-        e.preventDefault();
-        this.jumpToPreviousSection();
-      }
-    });
+  //     // Ctrl+Shift+P - Previous section
+  //     if (e.ctrlKey && e.shiftKey && e.key === '{') {
+  //       e.preventDefault();
+  //       this.jumpToPreviousSection();
+  //     }
+  //   });
 
-    console.log('[Minimap] Keyboard shortcuts set up');
-  }
+  //   console.log('[Minimap] Keyboard shortcuts set up');
+  // }
 
   /**
    * Toggle minimap visibility
    */
-  private toggleMinimap(): void {
-    this.isVisible = !this.isVisible;
-    this.minimap?.classList.toggle('hidden');
+  // private toggleMinimap(): void {
+  //   this.isVisible = !this.isVisible;
+  //   this.minimap?.classList.toggle('hidden');
 
-    chrome.storage.local.set({ minimapVisible: this.isVisible });
-    console.log('[Minimap] Visibility toggled:', this.isVisible);
-  }
+  //   chrome.storage.local.set({ minimapVisible: this.isVisible });
+  //   console.log('[Minimap] Visibility toggled:', this.isVisible);
+  // }
 
   /**
    * Start observing DOM changes with MutationObserver
    */
-  private startObserving(): void {
-    this.observer = new MutationObserver((mutations: MutationRecord[]) => {
-      let shouldScan = false;
+  // private startObserving(): void {
+  //   this.observer = new MutationObserver((mutations: MutationRecord[]) => {
+  //     let shouldScan = false;
 
-      for (const mutation of mutations) {
-        if (mutation.addedNodes.length > 0) {
-          for (const node of Array.from(mutation.addedNodes)) {
-            if (node.nodeType === 1 && this.isMessageNode(node as HTMLElement)) {
-              shouldScan = true;
-              break;
-            }
-          }
-        }
-      }
+  //     for (const mutation of mutations) {
+  //       if (mutation.addedNodes.length > 0) {
+  //         for (const node of Array.from(mutation.addedNodes)) {
+  //           if (node.nodeType === 1 && this.isMessageNode(node as HTMLElement)) {
+  //             shouldScan = true;
+  //             break;
+  //           }
+  //         }
+  //       }
+  //     }
 
-      if (shouldScan) {
-        // Debounce: wait 300ms of quiet before scanning
-        if (this.scanTimeout) {
-          clearTimeout(this.scanTimeout);
-        }
-        this.scanTimeout = window.setTimeout(() => this.scanConversation(), 300);
-      }
-    });
+  //     if (shouldScan) {
+  //       // Debounce: wait 300ms of quiet before scanning
+  //       if (this.scanTimeout) {
+  //         clearTimeout(this.scanTimeout);
+  //       }
+  //       this.scanTimeout = window.setTimeout(() => this.scanConversation(), 300);
+  //     }
+  //   });
 
-    this.observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
+  //   this.observer.observe(document.body, {
+  //     childList: true,
+  //     subtree: true
+  //   });
 
-    console.log('[Minimap] MutationObserver started');
-  }
+  //   console.log('[Minimap] MutationObserver started');
+  // }
 
   /**
    * Check if a DOM node is likely a message node
    */
-  private isMessageNode(node: HTMLElement): boolean {
-    if (!node.querySelector) return false;
-    const text = node.textContent || '';
-    return text.length > 20;
-  }
+  // private isMessageNode(node: HTMLElement): boolean {
+  //   if (!node.querySelector) return false;
+  //   const text = node.textContent || '';
+  //   return text.length > 20;
+  // }
 
   /**
    * Scan the conversation and identify all sections
@@ -761,7 +815,7 @@ class ClaudeMinimap {
       }
     });
 
-    // Hover to show summary (only when collapsed)
+    // Hover to show summary (only when collapsed) ***NOT WORKING
     clusterDiv.addEventListener('mouseenter', (e: MouseEvent) => {
       if (!(clusterDiv as any).isExpanded) {
         const summaryText = cluster.markers
@@ -1051,49 +1105,49 @@ class ClaudeMinimap {
     console.log(`[Minimap] Jumped to section ${sectionId + 1}`);
   }
 
-  /**
-   * Jump to next section
-   */
-  private jumpToNextSection(): void {
-    const container = this.scrollContainer as HTMLElement;
-    const currentScroll = container.scrollTop || 0;
+  // /**
+  //  * Jump to next section
+  //  */
+  // private jumpToNextSection(): void {
+  //   const container = this.scrollContainer as HTMLElement;
+  //   const currentScroll = container.scrollTop || 0;
 
-    // Find first section below current scroll position
-    for (let i = 0; i < this.sections.length; i++) {
-      const section = this.sections[i];
-      if (!section) continue; // Skip if undefined
+  //   // Find first section below current scroll position
+  //   for (let i = 0; i < this.sections.length; i++) {
+  //     const section = this.sections[i];
+  //     if (!section) continue; // Skip if undefined
 
-      const elementTop = this.getElementScrollTop(section.prompt.element);
-      if (elementTop > currentScroll + 50) {
-        this.jumpToSection(i);
-        return;
-      }
-    }
+  //     const elementTop = this.getElementScrollTop(section.prompt.element);
+  //     if (elementTop > currentScroll + 50) {
+  //       this.jumpToSection(i);
+  //       return;
+  //     }
+  //   }
 
-    console.log('[Minimap] No next section found');
-  }
+  //   console.log('[Minimap] No next section found');
+  // }
 
   /**
    * Jump to previous section
    */
-  private jumpToPreviousSection(): void {
-    const container = this.scrollContainer as HTMLElement;
-    const currentScroll = container.scrollTop || 0;
+  // private jumpToPreviousSection(): void {
+  //   const container = this.scrollContainer as HTMLElement;
+  //   const currentScroll = container.scrollTop || 0;
 
-    // Find last section above current scroll position
-    for (let i = this.sections.length - 1; i >= 0; i--) {
-      const section = this.sections[i];
-      if (!section) continue; // Skip if undefined
+  //   // Find last section above current scroll position
+  //   for (let i = this.sections.length - 1; i >= 0; i--) {
+  //     const section = this.sections[i];
+  //     if (!section) continue; // Skip if undefined
 
-      const elementTop = this.getElementScrollTop(section.prompt.element);
-      if (elementTop < currentScroll - 50) {
-        this.jumpToSection(i);
-        return;
-      }
-    }
+  //     const elementTop = this.getElementScrollTop(section.prompt.element);
+  //     if (elementTop < currentScroll - 50) {
+  //       this.jumpToSection(i);
+  //       return;
+  //     }
+  //   }
 
-    console.log('[Minimap] No previous section found');
-  }
+  //   console.log('[Minimap] No previous section found');
+  // }
 
   /**
    * Highlight an element with a flash effect

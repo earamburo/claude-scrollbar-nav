@@ -25,15 +25,22 @@
   border-radius: 12px;
   cursor: pointer;
   overflow: visible;
-  /* Remove all background and border properties to make it transparent */
   background: transparent;
-  border: none;
+  border: orange;
   box-shadow: none;
   backdrop-filter: none;
 }
 
-/* Minimap Hover State */
-.minimap-track:hover {}
+/* Markers Container */
+.minimap-markers {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  background-color: orange;
+}
 
 /* Current Viewport Indicator */
 .minimap-viewport {
@@ -53,15 +60,7 @@
   /* background: rgba(139, 92, 246, 0.4); */
 }
 
-/* Markers Container */
-.minimap-markers {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1;
-}
+
 
 /* Individual Marker - Card Style (Claude Orange Theme) */
 .minimap-marker {
