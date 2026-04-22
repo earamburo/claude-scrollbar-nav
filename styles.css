@@ -32,13 +32,7 @@
 
 /* Markers Container */
 .minimap-markers {
-  /* position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1; */
-  /* background-color: orange; */
+  align-items: center;
 }
 
 /* Current Viewport Indicator */
@@ -67,7 +61,7 @@
   right: 8px;
   width: auto;
   min-width: 140px;
-  max-width: 200px;
+  max-width: 1.5em;
   height: 32px;
   background: rgba(204, 93, 44, 0.9);
   /* Claude orange */
@@ -85,11 +79,11 @@
 }
 
 .minimap-marker:hover {
-  transform: translateY(-50%) translateX(-6px);
+  /* transform: translateY(-50%) translateX(-6px); */
   box-shadow: 0 5px 20px rgba(204, 93, 44, 0.5);
   background: rgba(230, 110, 50, 0.95);
   /* Brighter orange on hover */
-  max-width: 240px;
+  /* max-width: 240px; */
   border-left-width: 4px;
   z-index: 10;
 }

@@ -12,7 +12,6 @@ interface MessageData {
 interface MarkerData {
   element: HTMLDivElement;
   section: Section;
-  positionPercent: number;
 }
 
 interface StorageData {
@@ -191,25 +190,27 @@ class ClaudeMinimap {
     markersContainer.innerHTML = '';
     this.markers = [];
 
-    const container = this.scrollContainer as HTMLElement;
-    const scrollHeight = container.scrollHeight || 1;
+    markersContainer.style.display = 'flex';
+    markersContainer.style.flexDirection = 'column';
+    markersContainer.style.gap = '8px';
+    markersContainer.style.padding = '8px 0';
 
     this.sections.forEach((section, idx) => {
-      const elementTop = this.getElementScrollTop(section.prompt.element);
-      const positionPercent = (elementTop / scrollHeight) * 100;
-      this.renderSingleMarker({ section, idx, positionPercent }, markersContainer);
+      this.renderSingleMarker({ section, idx }, markersContainer);
     });
   }
 
   private renderSingleMarker(
-    markerData: { section: Section; idx: number; positionPercent: number },
+    markerData: { section: Section; idx: number },
     container: HTMLElement
   ): void {
-    const { section, positionPercent } = markerData;
+    const { section } = markerData;
 
     const marker = document.createElement('div');
     marker.className = 'minimap-marker';
-    marker.style.top = `${positionPercent}%`;
+    marker.style.position = 'relative';
+    marker.style.top = '0';
+    marker.style.transform = 'none';
 
     const label = document.createElement('div');
     label.className = 'minimap-marker-label';
@@ -219,7 +220,7 @@ class ClaudeMinimap {
     marker.appendChild(label);
 
     container.appendChild(marker);
-    this.markers.push({ element: marker, section, positionPercent });
+    this.markers.push({ element: marker, section });
   }
 
   // Clicking the track background scrolls proportionally to that position
@@ -238,12 +239,6 @@ class ClaudeMinimap {
     container.scrollTo({ top: container.scrollHeight * clickPercent, behavior: 'smooth' });
   }
 
-  private getElementScrollTop(element: HTMLElement): number {
-    const container = this.scrollContainer as HTMLElement;
-    return element.getBoundingClientRect().top -
-      container.getBoundingClientRect().top +
-      (container.scrollTop || 0);
-  }
 
   // ==========================================================================
   // DEBUG HELPERS
