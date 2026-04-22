@@ -20,26 +20,25 @@
 /* Minimap Track (the scrollbar rail) */
 .minimap-track {
   position: relative;
-  width: 80px;
+  width: 12rem;
   height: calc(100vh - 15rem);
   border-radius: 12px;
   cursor: pointer;
   overflow: visible;
   background: transparent;
-  border: orange;
   box-shadow: none;
   backdrop-filter: none;
 }
 
 /* Markers Container */
 .minimap-markers {
-  position: absolute;
+  /* position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 1;
-  background-color: orange;
+  z-index: 1; */
+  /* background-color: orange; */
 }
 
 /* Current Viewport Indicator */
