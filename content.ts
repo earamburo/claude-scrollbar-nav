@@ -42,6 +42,7 @@ class ClaudeMinimap {
       this.findScrollContainer();
       this.createMinimap();
       this.startObserving();
+      this.setupChatChangeListener();
       this.scanConversation();
     }, 1000);
   }
@@ -135,6 +136,24 @@ class ClaudeMinimap {
     this.observer.observe(document.body, { childList: true, subtree: true });
   }
 
+  // Watches for URL changes (Claude uses client-side routing) and re-initializes
+  // the scroll container + markers when the user switches chats
+  private setupChatChangeListener(): void {
+    let lastUrl = location.href;
+
+    new MutationObserver(() => {
+      if (location.href === lastUrl) return;
+      lastUrl = location.href;
+
+      setTimeout(() => {
+        this.findScrollContainer();
+        this.sections = [];
+        this.markers = [];
+        this.scanConversation();
+      }, 500);
+    }).observe(document.body, { childList: true, subtree: true });
+  }
+
   private isMessageNode(node: HTMLElement): boolean {
     if (!node.querySelector) return false;
     return (node.textContent || '').length > 20;
@@ -221,7 +240,7 @@ class ClaudeMinimap {
     const label = document.createElement('div');
     label.className = 'minimap-marker-label';
     label.textContent = section.prompt.text.length > 20
-      ? section.prompt.text.substring(0, 20) + '...'
+      ? `Q: ${section.prompt.text.substring(0, 20)}...`
       : section.prompt.text;
     marker.appendChild(label);
 
@@ -305,7 +324,6 @@ class ClaudeMinimap {
 // V2 — to implement next:
 //   - toggleMinimap()         show/hide with keyboard shortcut or button
 //   - setupKeyboardShortcuts() Ctrl+Shift+P/N to jump prev/next
-//   - setupChatChangeListener() re-scan when URL changes (new chat)
 //   - setupScrollSync()        viewport indicator that tracks scroll position
 //
 // V3 — clustering (for very long conversations):
