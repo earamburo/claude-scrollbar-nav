@@ -95,6 +95,12 @@ class ClaudeMinimap {
     `;
 
     document.body.appendChild(this.minimap);
+
+    const tooltip = document.createElement('div');
+    tooltip.id = 'minimap-tooltip';
+    tooltip.className = 'minimap-tooltip';
+    document.body.appendChild(tooltip);
+
     this.attachEventListeners();
   }
 
@@ -219,8 +225,46 @@ class ClaudeMinimap {
       : section.prompt.text;
     marker.appendChild(label);
 
+    marker.addEventListener('click', (e: MouseEvent) => {
+      e.stopPropagation();
+      this.jumpToSection(markerData.idx);
+    });
+
+    marker.addEventListener('mouseenter', (e: MouseEvent) => {
+      this.showTooltip(e.clientX, e.clientY, section.prompt.text);
+    });
+    marker.addEventListener('mouseleave', () => this.hideTooltip());
+
     container.appendChild(marker);
     this.markers.push({ element: marker, section });
+  }
+
+  private showTooltip(x: number, y: number, text: string): void {
+    const tooltip = document.getElementById('minimap-tooltip');
+    if (!tooltip) return;
+
+    tooltip.textContent = text;
+    tooltip.style.display = 'block';
+    // Position to the left of the cursor; measure after making visible
+    tooltip.style.left = `${x - tooltip.offsetWidth - 16}px`;
+    tooltip.style.top = `${y - tooltip.offsetHeight / 2}px`;
+  }
+
+  private hideTooltip(): void {
+    const tooltip = document.getElementById('minimap-tooltip');
+    if (tooltip) tooltip.style.display = 'none';
+  }
+
+  private jumpToSection(idx: number): void {
+    const section = this.sections[idx];
+    if (!section) return;
+
+    const HEADER_OFFSET = 80; // accounts for Claude's sticky header
+    const container = this.scrollContainer as HTMLElement;
+    const elementTop = section.prompt.element.getBoundingClientRect().top
+      - container.getBoundingClientRect().top
+      + container.scrollTop;
+    container.scrollTo({ top: elementTop - HEADER_OFFSET, behavior: 'smooth' });
   }
 
   // Clicking the track background scrolls proportionally to that position
@@ -259,7 +303,6 @@ class ClaudeMinimap {
 
 // ============================================================================
 // V2 — to implement next:
-//   - jumpToSection()         click marker → smooth scroll to message
 //   - toggleMinimap()         show/hide with keyboard shortcut or button
 //   - setupKeyboardShortcuts() Ctrl+Shift+P/N to jump prev/next
 //   - setupChatChangeListener() re-scan when URL changes (new chat)
@@ -271,8 +314,6 @@ class ClaudeMinimap {
 //   - expandCluster() / collapseCluster() / closeAllClusters()
 //   - checkIfMarkersFit()      decide whether to cluster
 //
-// V4 — tooltips:
-//   - showTooltip() / hideTooltip() / handleHover()
 // ============================================================================
 
 // ============================================================================
