@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Background -->
+  <rect width="128" height="128" rx="22" fill="#111111"/>
+
+  <!-- Marker 1 -->
+  <rect x="22" y="26" width="76" height="18" rx="5" fill="#CC5D2C"/>
+  <rect x="22" y="26" width="5"  height="18" rx="2.5" fill="#FF8C42"/>
+
+  <!-- Marker 2 -->
+  <rect x="22" y="55" width="76" height="18" rx="5" fill="#CC5D2C"/>
+  <rect x="22" y="55" width="5"  height="18" rx="2.5" fill="#FF8C42"/>
+
+  <!-- Marker 3 -->
+  <rect x="22" y="84" width="76" height="18" rx="5" fill="#CC5D2C"/>
+  <rect x="22" y="84" width="5"  height="18" rx="2.5" fill="#FF8C42"/>
+</svg>
