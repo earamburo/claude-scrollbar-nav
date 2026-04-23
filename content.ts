@@ -43,6 +43,7 @@ class ClaudeMinimap {
       this.createMinimap();
       this.startObserving();
       this.setupChatChangeListener();
+      this.setupKeyboardShortcuts();
       this.scanConversation();
     }, 1000);
   }
@@ -75,6 +76,8 @@ class ClaudeMinimap {
 
   private createMinimap(): void {
     document.getElementById('claude-minimap')?.remove();
+    document.getElementById('minimap-toggle-btn')?.remove();
+    document.getElementById('minimap-tooltip')?.remove();
 
     const container = this.scrollContainer as HTMLElement;
     const containerStyle = window.getComputedStyle(container);
@@ -102,7 +105,48 @@ class ClaudeMinimap {
     tooltip.className = 'minimap-tooltip';
     document.body.appendChild(tooltip);
 
+    const toggleBtn = document.createElement('button');
+    toggleBtn.id = 'minimap-toggle-btn';
+    toggleBtn.textContent = this.isVisible ? '▶' : '◀';
+    toggleBtn.style.cssText = `
+      position: fixed;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 999998;
+      background: rgba(204, 93, 44, 0.9);
+      border: none;
+      color: white;
+      width: 14px;
+      height: 48px;
+      cursor: pointer;
+      border-radius: 6px 0 0 6px;
+      font-size: 9px;
+      padding: 0;
+    `;
+    toggleBtn.addEventListener('click', () => this.toggleMinimap());
+    document.body.appendChild(toggleBtn);
+
     this.attachEventListeners();
+  }
+
+  private setupKeyboardShortcuts(): void {
+    document.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+        e.preventDefault();
+        this.toggleMinimap();
+      }
+    });
+  }
+
+  private toggleMinimap(): void {
+    this.isVisible = !this.isVisible;
+    this.minimap?.classList.toggle('hidden', !this.isVisible);
+
+    const toggleBtn = document.getElementById('minimap-toggle-btn');
+    if (toggleBtn) toggleBtn.textContent = this.isVisible ? '▶' : '◀';
+
+    chrome.storage.local.set({ minimapVisible: this.isVisible });
   }
 
   private attachEventListeners(): void {
@@ -322,7 +366,6 @@ class ClaudeMinimap {
 
 // ============================================================================
 // V2 — to implement next:
-//   - toggleMinimap()         show/hide with keyboard shortcut or button
 //   - setupKeyboardShortcuts() Ctrl+Shift+P/N to jump prev/next
 //   - setupScrollSync()        viewport indicator that tracks scroll position
 //
