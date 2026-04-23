@@ -109,6 +109,32 @@
       line-height: 1.5;
     }
 
+    .shortcuts {
+      background: #1c1c1c;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 16px;
+    }
+
+    .shortcut-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .key {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 11px;
+      color: white;
+    }
+
     .footer {
       font-size: 11px;
       color: rgba(255, 255, 255, 0.2);
@@ -158,6 +184,13 @@
     </div>
   </div>
 
-  <div class="footer">Claude Nav — v1</div>
+  <div class="shortcuts">
+    <div class="shortcut-row">
+      <span>Toggle sidebar</span>
+      <span class="key">Ctrl+Shift+S</span>
+    </div>
+  </div>
+
+  <div class="footer">ClaudeMap — v1</div>
 </body>
 </html>
