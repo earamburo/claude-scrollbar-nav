@@ -2,6 +2,11 @@
 
 A Chrome extension that adds a navigation sidebar to Claude.ai. Markers appear for each user message — click to jump, hover to preview.
 
+![Promo tile](promo-tile-size.png)
+
+![ClaudeMap screenshot](screenshot.png)
+
+
 ## How it works
 
 On load the extension runs through this sequence:
